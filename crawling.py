@@ -1,11 +1,7 @@
-from gensim.summarization import summarize
-import kss
-import re
 import requests
 from bs4 import BeautifulSoup
 import trafilatura
-
-from summa.summarizer import summarize #pip install gensim==3.8.3, 이전 버젼 지우고, pip uninstall -y gensim kss summa
+from transformers import pipeline
 
 
 url = "https://www.metroseoul.co.kr/article/20250909500439"
@@ -30,22 +26,34 @@ url = "https://www.metroseoul.co.kr/article/20250909500439"
 #     print(response.status_code)
 
 headers = {"User-Agent": "Mozilla/5.0"}
-html = requests.get(url, headers=headers).text
-html.raise_for_status()
+res = requests.get(url, headers=headers)
+res.raise_for_status()
 
-soup = BeautifulSoup(html, "html.parser")
+soup = BeautifulSoup(res.text, "html.parser")
 
 headline_h1 = soup.find("title")
 if headline_h1:
     print("헤드라인:", headline_h1.get_text(strip=True))
 
+downloaded = trafilatura.fetch_url(url)
+
 text = trafilatura.extract(
-        html,
+        downloaded,
         include_comments=False,
         include_tables=False,
         include_images=False,
         favor_recall=True, 
+        output_format="txt"
     )
-print("본문 = ", text.strip())
+print("본문 = ", text)
 
+min_len = 20
+max_len = 130
+if len(text) < 200:
+    min_len = 10
+    max_len = 80
 
+summarizer = pipeline("summarization", model = "gogamza/kobart-summrization")
+summary = summarizer(text, max_length=max_len, min_length=5, do_sample=False)
+
+summaries.append(summary[0]['summary_text'])
